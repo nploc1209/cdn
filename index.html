@@ -6,6 +6,7 @@
     <title>The CDN Website</title>
     <link rel="stylesheet" href="style.css">
     <script src="script.js" defer></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
 <div class="dock">
@@ -28,12 +29,12 @@
         <p>What do you want to ship today?</p>
     </div>
     <div class="widget">
-        <p><strong>Storage</strong></p>
+        <p>Storage</p>
         <p id="load">████████████░░░░░░░░░░░░░░░</p>
         <p id="storage-left">1GB left</p>
     </div>
     <div class="widget">
-        <p><strong>Bandwidth</strong></p>
+        <p>Bandwidth</p>
         <svg class="chart-bandwidth" viewBox="0 0 400 100">
             <path class="area"
                   d="M0 80
@@ -59,7 +60,7 @@
         </svg>
     </div>
     <div class="widget">
-        <p><strong>Requests</strong></p>
+        <p>Requests</p>
 
         <svg class="chart-requests" viewBox="0 0 400 100">
             <path class="area"
@@ -90,12 +91,77 @@
 <section class="workplace">
     <div class="canvas">
         <h2>The canvas</h2>
-        <p>Doing stuff with your files here👇</p>
         <canvas id="board"></canvas>
     </div>
     <div class="drive">
         <h2>Your files</h2>
+        <table class="explorer">
+            <thead>
+            <tr>
+                <th>Name</th>
+                <th>Size</th>
+                <th>Date</th>
+                <th>Modify</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td>
+                    <div class="file">
+                        <i data-lucide="folder"></i>
+                        images
+                    </div>
+                </td>
+                <td style="text-align: center">11 MB</td>
+                <td style="text-align: center">20/09/2026</td>
+                <td>
+                    <div class="config">
+                        <button><i data-lucide="link"></i></button>
+                        <button><i data-lucide="trash" ></i></button>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div class="file">
+                        <i data-lucide="file-code"></i>
+                        index.html
+                    </div>
+                </td>
+                <td style="text-align: center">12 KB</td>
+                <td style="text-align: center">23/09/2026</td>
+                <td>
+                    <div class="config">
+                        <button><i data-lucide="link"></i></button>
+                        <button><i data-lucide="trash"></i></button>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div class="file">
+                        <i data-lucide="file-code"></i>
+                        style.css
+                    </div>
+                </td>
+                <td style="text-align: center">8 KB</td>
+                <td style="text-align: center">22/09/2026</td>
+                <td>
+                    <div class="config">
+                        <button><i data-lucide="link"></i></button>
+                        <button><i data-lucide="trash"></i></button>
+                    </div>
+                </td>
+            </tr>
+            </tbody>
+        </table>
     </div>
 </section>
+<script>lucide.createIcons();</script>
 </body>
+<footer>
+    <section class="contact">
+        <p>Made by Luke - 2026</p>
+    </section>
+</footer>
 </html>
