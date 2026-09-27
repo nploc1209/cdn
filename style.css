@@ -168,7 +168,6 @@ body {
     width: 95%;
     height: calc(95vh - 290px);
     border: 1px solid lightgray;
-    border-radius: 10px;
 }
 
 .drive h2 {
@@ -339,4 +338,12 @@ body {
     font-size: 14px;
     font-family: "Georgia", serif;
     font-weight: bold;
+}
+
+.announcement {
+    margin: 30px 20px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    height: calc(100vh - 390px);
 }
