@@ -85,7 +85,7 @@ body {
     display: grid;
     grid-template-columns: 1.7fr 1.5fr 1.5fr 1.5fr;
     gap: 10px;
-    padding: 60px 2px 2px 0;
+    margin: 80px 2px 2px 0;
 
     font-family: "Pixelify Sans", sans-serif;
     font-size: 18px;
@@ -156,7 +156,7 @@ body {
     display: grid;
     grid-template-columns: 1fr 1.25fr;
     font-family: "Georgia", serif;
-    margin: 20px 10px 0;
+    margin: 0 10px 0 ;
 }
 
 .canvas h2 {
@@ -166,7 +166,7 @@ body {
 
 #board {
     width: 95%;
-    height: calc(90vh - 290px);
+    height: calc(95vh - 290px);
     border: 1px solid lightgray;
     border-radius: 10px;
 }
@@ -244,10 +244,99 @@ body {
     color: #e57373;
 }
 
-.contact {
+.stats {
+    margin: 100px 20px 40px;
+    font-family: "pixelify Sans", sans-serif;
+    font-size: 20px;
+    text-align: center;
+}
+
+.diagnostics {
+    margin: 0 20px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 30px;
+}
+
+.overall-status {
     display: flex;
-    text-align: right;
-    justify-content: right;
+    align-items: center;
+    gap: 10px;
+
     font-family: "Pixelify Sans", sans-serif;
-    margin: 10px 20px;
+    font-size: 18px;
+}
+
+.small-dot {
+    display: inline-block;
+
+    width: 14px;
+    height: 14px;
+
+    border-radius: 50%;
+    background-color: #20a84a;
+}
+
+.box {
+    border: 1px solid black;
+    padding: 20px;
+    min-height: 130px;
+}
+
+.box-header h3 {
+    margin: 0;
+    font-size: 21px;
+    font-family: "Pixelify Sans", sans-serif;
+}
+
+.box-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding-bottom: 15px;
+    border-bottom: 1px solid #ddd;
+}
+
+.operational {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+
+    font-size: 14px;
+}
+
+.box-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+
+    margin-top: 18px;
+}
+
+.box-content div {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.box-content div + div {
+    border-left: 1px solid #ddd;
+    padding-left: 20px;
+}
+
+.box-content span {
+    font-family: Georgia, serif;
+    font-size: 14px;
+}
+
+.box-content strong {
+    font-size: 20px;
+    font-family: "Georgia", serif;
+}
+
+#total-left\> {
+    margin: 0;
+    font-size: 14px;
+    font-family: "Georgia", serif;
+    font-weight: bold;
 }

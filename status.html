@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The CDN Website</title>
+    <title>Status - CDN</title>
     <link rel="stylesheet" href="style.css">
     <script src="script.js" defer></script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -22,5 +22,69 @@
     </div>
     <div class="auth"><a href="#">Account</a></div>
 </div>
+<div class="stats">
+    <h2>If it works, it works!</h2>
+</div>
+<section class="diagnostics">
+    <div class="box">
+        <div class="box-header">
+            <h3>CDN</h3>
+            <span class="operational">
+                    Mark as operational if you still see this page 😉
+                </span>
+        </div>
+        <div class="box-content">
+            <div>
+                <span>Response time</span>
+                <strong>42 ms</strong>
+            </div>
+            <div>
+                <span>Uptime</span>
+                <strong>99.98%</strong>
+            </div>
+        </div>
+    </div>
+    <div class="box">
+        <div class="box-header">
+            <h3>Storage</h3>
+            <span class="operational">
+                    <span class="small-dot"></span>
+                    Operational
+                </span>
+        </div>
+        <div class="box-content">
+            <div>
+                <span>Used storage</span>
+                <p id="load">███████░░░░░░░░░░</p>
+                <p id="total-left>">2/10 GB</p>
+            </div>
+
+            <div>
+                <span>Total files</span>
+                <strong>128</strong>
+            </div>
+        </div>
+    </div>
+    <div class="box">
+        <div class="box-header">
+            <h3>API</h3>
+            <span class="operational">
+                    <span class="small-dot"></span>
+                    Operational
+                </span>
+        </div>
+        <div class="box-content">
+            <div>
+                <span>Response time</span>
+                <strong>68 ms</strong>
+            </div>
+
+            <div>
+                <span>Uptime</span>
+                <strong>99.99%</strong>
+            </div>
+        </div>
+    </div>
+</section>
 </body>
 </html>
