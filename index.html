@@ -22,8 +22,25 @@
     </div>
     <div class="auth"><a href="#">Account</a></div>
 </div>
-
-<section class="dashboard">
+<section class="empty-state" id="empty-state">
+    <figure>
+        <img src="https://github.com/hackclub/dinosaurs/raw/main/twin_peaks_dino.png" alt="HackClub Orpheus is sitting on the stage" height="400">
+        <figcaption><em>This art belongs to <a href="https://github.com/maxwofford">maxwofford</a> - Orpheus from HackClub</em></figcaption>
+    </figure>
+    <div class="req">
+        <h2>Hi! Pls upload a file 🥹</h2>
+        <p>We need <strong>ONE TO PROCESS</strong> functionally,</p>
+        <p>You can <strong>DROP IT ANYWHERE</strong> in this page!</p>
+        <div class="drop-button">
+            <p>Or using this /ˈbʌʔən/:</p>
+            <button class="add-file">
+                <i data-lucide="plus"></i>
+                Add file
+            </button>
+        </div>
+    </div>
+</section>
+<section class="dashboard" id="dashboard">
     <div class="welcome">
         <h2>Good morning, Luke!</h2>
         <p>What do you want to ship today?</p>
@@ -88,7 +105,7 @@
         </svg>
     </div>
 </section>
-<section class="workplace">
+<section class="workplace" id="workplace">
     <div class="canvas">
         <h2>The canvas</h2>
         <canvas id="board"></canvas>
@@ -157,6 +174,19 @@
         </table>
     </div>
 </section>
-<script>lucide.createIcons();</script>
+<script>
+    const hasFiles = false;
+    const emptyState = document.getElementById("empty-state");
+    const dashboard = document.getElementById("dashboard");
+    const workplace = document.getElementById("workplace");
+    if (hasFiles) {
+        emptyState.style.display = "none";
+    } else {
+        dashboard.style.display = "none";
+        workplace.style.display = "none";
+    }
+
+    lucide.createIcons();
+</script>
 </body>
 </html>
