@@ -3,10 +3,233 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The CDN Website</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="script.js" defer></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <title>Docs - CDN</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preload" href="style.css?v=20261004m" as="style">
+    <link rel="preload" href="script.js?v=20261004m" as="script">
+    <link href="https://fonts.googleapis.com/css2?family=Imperial+Script&family=Pixelify+Sans:wght@400..700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css?v=20261004m">
+    <script src="script.js?v=20261004m" defer></script>
+    <style>
+        .docs-stats {
+            margin: 80px 20px 14px;
+            font-family: "Pixelify Sans", sans-serif;
+            font-size: 20px;
+            text-align: center;
+        }
+
+        .docs-stats h2 {
+            margin: 0;
+            font-size: 26px;
+            text-align: center;
+        }
+
+        .docs-grid-4 {
+            margin: 0 20px 25px;
+            height: calc(100vh - 170px);
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 18px;
+            box-sizing: border-box;
+        }
+
+        .docs-box {
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+            padding: 16px 20px;
+            overflow: hidden;
+            background: white;
+            min-height: 0;
+        }
+
+        .docs-box .box-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .docs-box .box-header h3 {
+            margin: 0;
+            font-size: 22px;
+        }
+
+        .docs-desc {
+            font-family: "Georgia", serif;
+            font-size: 15px;
+            line-height: 1.5;
+            color: #222;
+            margin: 10px 0 0;
+        }
+
+        .codebox {
+            position: relative;
+            margin-top: 10px;
+            flex: 1;
+            display: flex;
+            min-height: 0;
+        }
+
+        .docs-code {
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 14px 44px 14px 14px;
+            font-family: "Courier New", Courier, monospace;
+            font-size: 14px;
+            line-height: 1.55;
+            color: #0f172a;
+            overflow: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+            margin: 0;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .docs-code::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+
+        .docs-code::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+
+        .codebox .copy-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: white;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            padding: 6px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #475569;
+            transition: all 0.15s ease;
+            z-index: 2;
+        }
+
+        .codebox .copy-btn:hover {
+            background: #f1f5f9;
+            color: #0f172a;
+            border-color: #94a3b8;
+        }
+
+        .codebox .copy-btn.copied {
+            background: #059669;
+            border-color: #059669;
+            color: white;
+        }
+
+        .codebox .copy-btn svg {
+            width: 15px;
+            height: 15px;
+            display: block;
+        }
+
+        .hl-cmd {
+            color: #7c3aed;
+            font-weight: 700;
+        }
+
+        .hl-flag {
+            color: #d97706;
+        }
+
+        .hl-post {
+            color: #059669;
+            font-weight: 700;
+        }
+
+        .hl-del {
+            color: #dc2626;
+            font-weight: 700;
+        }
+
+        .hl-url {
+            color: #0284c7;
+        }
+
+        .hl-str {
+            color: #16a34a;
+        }
+
+        .hl-var {
+            color: #e11d48;
+            font-weight: 700;
+        }
+
+        .docs-meta-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            font-family: "Georgia", serif;
+            font-size: 14px;
+            color: #475569;
+        }
+
+        .docs-meta-row code {
+            font-family: monospace;
+            font-size: 13px;
+            color: #0f172a;
+            background: #f1f5f9;
+            padding: 3px 8px;
+            border-radius: 4px;
+            border: 1px solid #e2e8f0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-weight: 600;
+        }
+
+        .docs-badge {
+            display: inline-block;
+            padding: 3px 9px;
+            border-radius: 4px;
+            font-family: "Georgia", serif;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .docs-badge.get {
+            background: #e0f2fe;
+            color: #0284c7;
+            border: 1px solid #bae6fd;
+        }
+
+        .docs-badge.post {
+            background: #dcfce7;
+            color: #059669;
+            border: 1px solid #bbf7d0;
+        }
+
+        .docs-badge.delete {
+            background: #ffe4e6;
+            color: #e11d48;
+            border: 1px solid #fecdd3;
+        }
+
+        @media (max-width: 768px) {
+            .docs-grid-4 {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto;
+                height: auto;
+                max-height: calc(100vh - 160px);
+                overflow-y: auto;
+            }
+        }
+    </style>
 </head>
 <body>
 <div class="dock">
@@ -20,7 +243,88 @@
         <a href="status.html">Status</a>
         <a href="docs.html" class="active">Docs</a>
     </div>
-    <div class="auth"><a href="#">Account</a></div>
+    <div class="auth"><a href="account.html">Account</a></div>
 </div>
+
+<div class="docs-stats">
+    <h2>API Documentation</h2>
+</div>
+
+<main class="docs-grid-4">
+    <div class="box docs-box">
+        <div class="box-header">
+            <h3>Upload</h3>
+            <span class="docs-badge post">POST</span>
+        </div>
+        <p class="docs-desc">Upload files directly or via chunked multipart up to 1GB.</p>
+        <div class="codebox">
+            <pre class="docs-code"><span class="hl-cmd">curl</span> <span class="hl-flag">-X</span> <span class="hl-post">POST</span> <span class="hl-url">https://the-cdn-website.nploc1209.workers.dev/api/upload</span> \
+  <span class="hl-flag">-F</span> <span class="hl-str">"file=@photo.png"</span></pre>
+            <button class="copy-btn" title="Copy code" aria-label="Copy code">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-copy"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+            </button>
+        </div>
+        <div class="docs-meta-row">
+            <span>Returns:</span>
+            <code>{ id, name, size, mime_type, url }</code>
+        </div>
+    </div>
+
+    <div class="box docs-box">
+        <div class="box-header">
+            <h3>Stream</h3>
+            <span class="docs-badge get">GET</span>
+        </div>
+        <p class="docs-desc">Stream or download files with HTTP Range seeking and edge caching.</p>
+        <div class="codebox">
+            <pre class="docs-code"><span class="hl-cmd">curl</span> <span class="hl-flag">-I</span> <span class="hl-url">https://the-cdn-website.nploc1209.workers.dev/f/</span><span class="hl-var">&lt;file-id&gt;</span></pre>
+            <button class="copy-btn" title="Copy code" aria-label="Copy code">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-copy"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+            </button>
+        </div>
+        <div class="docs-meta-row">
+            <span>Headers:</span>
+            <code>Accept-Ranges: bytes, Cache-Control: public, max-age=31536000</code>
+        </div>
+    </div>
+
+    <div class="box docs-box">
+        <div class="box-header">
+            <h3>Files</h3>
+            <span class="docs-badge get">GET</span>
+        </div>
+        <p class="docs-desc">List all uploaded files and metadata sorted by date.</p>
+        <div class="codebox">
+            <pre class="docs-code"><span class="hl-cmd">curl</span> <span class="hl-url">https://the-cdn-website.nploc1209.workers.dev/api/files</span></pre>
+            <button class="copy-btn" title="Copy code" aria-label="Copy code">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-copy"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+            </button>
+        </div>
+        <div class="docs-meta-row">
+            <span>Returns:</span>
+            <code>Array&lt;{ id, name, size, mime_type, created_at }&gt;</code>
+        </div>
+    </div>
+
+    <div class="box docs-box">
+        <div class="box-header">
+            <h3>Delete</h3>
+            <span class="docs-badge delete">DELETE</span>
+        </div>
+        <p class="docs-desc">Permanently delete a file from R2 storage and the database.</p>
+        <div class="codebox">
+            <pre class="docs-code"><span class="hl-cmd">curl</span> <span class="hl-flag">-X</span> <span class="hl-del">DELETE</span> <span class="hl-url">https://the-cdn-website.nploc1209.workers.dev/api/files/</span><span class="hl-var">&lt;file-id&gt;</span></pre>
+            <button class="copy-btn" title="Copy code" aria-label="Copy code">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-copy"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+            </button>
+        </div>
+        <div class="docs-meta-row">
+            <span>Status:</span>
+            <code>200 OK {"success": true}</code>
+        </div>
+    </div>
+</main>
+
+<div class="footer-credit">Made by Luke - 2026</div>
 </body>
 </html>
