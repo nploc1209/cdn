@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account - CDN</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preload" href="style.css?v=20261004m" as="style">
+    <link rel="preload" href="script.js?v=20261004m" as="script">
+    <link href="https://fonts.googleapis.com/css2?family=Imperial+Script&family=Pixelify+Sans:wght@400..700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css?v=20261004m">
+    <style>
+        html, body {
+            overflow-y: auto;
+            min-height: 100vh;
+        }
+    </style>
+    <script src="script.js?v=20261004m" defer></script>
+</head>
+<body>
+<div class="dock">
+    <div class="logo"><a href="#">
+        <span class="web">The</span>
+        CDN
+        <span class="web">Website</span>
+    </a></div>
+    <div class="nav">
+        <a href="index.html">Files</a>
+        <a href="status.html">Status</a>
+        <a href="docs.html">Docs</a>
+    </div>
+    <div class="auth"><a href="account.html" class="active">Account</a></div>
+</div>
+
+<div class="account-page-wrapper">
+    <div class="account-box" id="account-page">
+        <div id="account-info-card" style="display: none;">
+            <div class="acc-header">
+                <div class="acc-profile">
+                    <div class="acc-avatar">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    </div>
+                    <div class="acc-identity">
+                        <div class="acc-username-row">
+                            <span class="acc-at">@</span><span id="acc-display-username">-</span>
+                        </div>
+                        <div class="acc-meta">
+                            <span>Joined <span id="acc-display-created">-</span></span>
+                            <span id="acc-display-id" style="display: none;"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="acc-actions">
+                    <button type="button" class="btn-subtle" id="btn-logout">Logout</button>
+                    <button type="button" class="btn-danger-subtle" id="btn-delete-acc">Delete Account</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="account-edit-sections" style="display: none;">
+            <div class="acc-divider"></div>
+            <div class="acc-section">
+                <div class="acc-section-title">Username</div>
+                <form id="form-change-username" class="acc-inline-form">
+                    <input type="text" id="input-new-username" class="acc-input" placeholder="New username" minlength="3" required>
+                    <button type="submit" class="acc-btn">Save</button>
+                </form>
+                <div class="form-msg" id="msg-change-user"></div>
+            </div>
+
+            <div class="acc-divider"></div>
+            <div class="acc-section">
+                <div class="acc-section-title">Password</div>
+                <form id="form-change-password" class="acc-pass-form">
+                    <div class="acc-input-group">
+                        <input type="password" id="input-old-password" class="acc-input" placeholder="Current password" required>
+                        <input type="password" id="input-new-password" class="acc-input" placeholder="New password" minlength="4" required>
+                    </div>
+                    <button type="submit" class="acc-btn">Update</button>
+                </form>
+                <div class="form-msg" id="msg-change-pass"></div>
+            </div>
+        </div>
+
+        <div id="account-empty-notice" style="display: none;">
+            <div class="acc-header">
+                <div class="acc-profile">
+                    <div class="acc-avatar">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    </div>
+                    <div class="acc-identity">
+                        <div class="acc-username-row">Guest</div>
+                        <div class="acc-meta acc-meta-red">
+                            <span>Upload files on <a href="index.html">Files</a> to auto-generate an account, or log in below.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="account-login-card" style="display: none;">
+            <div class="acc-divider"></div>
+            <div class="acc-section">
+                <div class="acc-section-title">Log In</div>
+                <form id="form-login" class="acc-pass-form">
+                    <div class="acc-input-group">
+                        <input type="text" id="input-login-username" class="acc-input" placeholder="Username" required>
+                        <input type="password" id="input-login-password" class="acc-input" placeholder="Password" required>
+                    </div>
+                    <button type="submit" class="acc-btn">Log In</button>
+                </form>
+                <div class="form-msg" id="msg-login"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="footer-credit">Made by Luke - 2026</div>
+</body>
+</html>
