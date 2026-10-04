@@ -4,9 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The CDN Website</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="script.js" defer></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preload" href="style.css?v=20261004m" as="style">
+    <link rel="preload" href="script.js?v=20261004m" as="script">
+    <link href="https://fonts.googleapis.com/css2?family=Imperial+Script&family=Pixelify+Sans:wght@400..700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css?v=20261004m">
+    <script src="script.js?v=20261004m" defer></script>
 </head>
 <body>
 <div class="dock">
@@ -20,9 +24,9 @@
         <a href="status.html">Status</a>
         <a href="docs.html">Docs</a>
     </div>
-    <div class="auth"><a href="#">Account</a></div>
+    <div class="auth"><a href="account.html">Account</a></div>
 </div>
-<section class="empty-state" id="empty-state">
+<section class="empty-state" id="empty-state" style="display: none;">
     <figure>
         <img src="https://github.com/hackclub/dinosaurs/raw/main/twin_peaks_dino.png" alt="HackClub Orpheus is sitting on the stage" height="400">
         <figcaption><em>This art belongs to <a href="https://github.com/maxwofford">maxwofford</a> - Orpheus from HackClub</em></figcaption>
@@ -33,85 +37,97 @@
         <p>You can <strong>DROP IT ANYWHERE</strong> in this page!</p>
         <div class="drop-button">
             <p>Or using this /ˈbʌʔən/:</p>
-            <button class="add-file">
-                <i data-lucide="plus"></i>
+            <button class="add-file" id="add-file">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
                 Add file
             </button>
         </div>
     </div>
 </section>
-<section class="dashboard" id="dashboard">
+<section class="dashboard" id="dashboard" style="display: none;">
     <div class="welcome">
-        <h2>Good morning, Luke!</h2>
+        <h2>Good morning!</h2>
         <p>What do you want to ship today?</p>
     </div>
     <div class="widget">
         <p>Storage</p>
-        <p id="load">████████████░░░░░░░░░░░░░░░</p>
-        <p id="storage-left">1GB left</p>
+        <p id="load">░░░░░░░░░░░░░░░░░░░░</p>
+        <p id="storage-left">--</p>
     </div>
     <div class="widget">
-        <p>Bandwidth</p>
+        <p>Bandwidth <span id="bandwidth-val"></span></p>
         <svg class="chart-bandwidth" viewBox="0 0 400 100">
-            <path class="area"
-                  d="M0 80
-             L40 70 L80 75 L120 50 L160 55
-             L200 30 L240 40 L280 25 L320 45
-             L360 20 L400 28
-             V100 H0 Z"/>
-            <polyline
-                    points="
-        0,80
-        40,70
-        80,75
-        120,50
-        160,55
-        200,30
-        240,40
-        280,25
-        320,45
-        360,20
-        400,28
-    "
-            />
+            <path class="area" d=""/>
+            <polyline points=""/>
         </svg>
     </div>
     <div class="widget">
-        <p>Requests</p>
+        <p>Requests <span id="requests-val"></span></p>
 
         <svg class="chart-requests" viewBox="0 0 400 100">
-            <path class="area"
-                  d="M0 75
-                 L40 72 L80 65 L120 70 L160 35
-                 L200 62 L240 58 L280 20 L320 55
-                 L360 48 L400 30
-                 V100 H0 Z"/>
-
-            <polyline
-                    points="
-                    0,75
-                    40,72
-                    80,65
-                    120,70
-                    160,35
-                    200,62
-                    240,58
-                    280,20
-                    320,55
-                    360,48
-                    400,30
-                "
-            />
+            <path class="area" d=""/>
+            <polyline points=""/>
         </svg>
     </div>
 </section>
-<section class="workplace" id="workplace">
+<section class="workplace" id="workplace" style="display: none;">
     <div class="canvas">
-        <h2>The canvas</h2>
-        <canvas id="board"></canvas>
+        <div class="canvas-header">
+            <h2>The canvas</h2>
+            <div class="canvas-tools">
+                <button class="tool-btn active" id="tool-pen" title="Pen">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-pencil"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>
+                </button>
+                <button class="tool-btn" id="tool-eraser" title="Eraser">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-eraser"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg>
+                </button>
+                <button class="tool-btn" id="tool-move" title="Move image">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-move"><polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="15 19 12 22 9 19"/><polyline points="19 9 22 12 19 15"/><line x1="2" x2="22" y1="12" y2="12"/><line x1="12" x2="12" y1="2" y2="22"/></svg>
+                </button>
+                <button class="tool-btn" id="tool-reset" title="Reset canvas">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-rotate-ccw"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                </button>
+            </div>
+        </div>
+        <div class="board-container">
+            <canvas id="board"></canvas>
+            <div class="canvas-notice-banner" id="file-account-banner" style="display: none;">
+                <div class="canvas-notice-header">
+                    <span class="canvas-notice-title">Account Generated!</span>
+                    <button type="button" class="notice-close-btn" id="close-file-banner" title="Dismiss notice">×</button>
+                </div>
+                <div class="canvas-notice-rows">
+                    <div class="canvas-notice-row">
+                        <span class="cn-label">Username:</span>
+                        <code class="cn-val" id="banner-username"></code>
+                        <button type="button" class="cn-copy-btn" id="copy-banner-user" title="Copy username">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-copy"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                        </button>
+                    </div>
+                    <div class="canvas-notice-row">
+                        <span class="cn-label">Password:</span>
+                        <span class="cn-pass-wrapper">
+                            <code class="cn-val cn-pass-val" id="banner-password"></code>
+                        </span>
+                        <button type="button" class="cn-copy-btn" id="copy-banner-pass" title="Copy password">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-copy"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="canvas-notice-footer">
+                    You can customize your credentials on the <a href="account.html">Account page</a>.
+                </div>
+            </div>
+        </div>
     </div>
     <div class="drive">
-        <h2>Your files</h2>
+        <div class="drive-header">
+            <h2>Your files</h2>
+            <button class="add-file" id="add-file-drive">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                Add file
+            </button>
+        </div>
         <table class="explorer">
             <thead>
             <tr>
@@ -121,72 +137,12 @@
                 <th>Modify</th>
             </tr>
             </thead>
-            <tbody>
-            <tr>
-                <td>
-                    <div class="file">
-                        <i data-lucide="folder"></i>
-                        images
-                    </div>
-                </td>
-                <td style="text-align: center">11 MB</td>
-                <td style="text-align: center">20/09/2026</td>
-                <td>
-                    <div class="config">
-                        <button><i data-lucide="link"></i></button>
-                        <button><i data-lucide="trash" ></i></button>
-                    </div>
-                </td>
-            </tr>
-            <tr>
-                <td>
-                    <div class="file">
-                        <i data-lucide="file-code"></i>
-                        index.html
-                    </div>
-                </td>
-                <td style="text-align: center">12 KB</td>
-                <td style="text-align: center">23/09/2026</td>
-                <td>
-                    <div class="config">
-                        <button><i data-lucide="link"></i></button>
-                        <button><i data-lucide="trash"></i></button>
-                    </div>
-                </td>
-            </tr>
-            <tr>
-                <td>
-                    <div class="file">
-                        <i data-lucide="file-code"></i>
-                        style.css
-                    </div>
-                </td>
-                <td style="text-align: center">8 KB</td>
-                <td style="text-align: center">22/09/2026</td>
-                <td>
-                    <div class="config">
-                        <button><i data-lucide="link"></i></button>
-                        <button><i data-lucide="trash"></i></button>
-                    </div>
-                </td>
-            </tr>
-            </tbody>
+
+            <tbody id="file-list"></tbody>
         </table>
     </div>
 </section>
-<script>
-    const hasFiles = false;
-    const emptyState = document.getElementById("empty-state");
-    const dashboard = document.getElementById("dashboard");
-    const workplace = document.getElementById("workplace");
-    if (hasFiles) {
-        emptyState.style.display = "none";
-    } else {
-        dashboard.style.display = "none";
-        workplace.style.display = "none";
-    }
-
-    lucide.createIcons();
-</script>
+<input type="file" id="file-input" style="display: none;" multiple>
+<div class="footer-credit">Made by Luke - 2026</div>
 </body>
 </html>

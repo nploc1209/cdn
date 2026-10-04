@@ -4,9 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Status - CDN</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="script.js" defer></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preload" href="style.css?v=20261004m" as="style">
+    <link rel="preload" href="script.js?v=20261004m" as="script">
+    <link href="https://fonts.googleapis.com/css2?family=Imperial+Script&family=Pixelify+Sans:wght@400..700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css?v=20261004m">
+    <script src="script.js?v=20261004m" defer></script>
 </head>
 <body>
 <div class="dock">
@@ -20,7 +24,7 @@
         <a href="status.html" class="active">Status</a>
         <a href="docs.html">Docs</a>
     </div>
-    <div class="auth"><a href="#">Account</a></div>
+    <div class="auth"><a href="account.html">Account</a></div>
 </div>
 <div class="stats">
     <h2>If it works, it works!</h2>
@@ -36,11 +40,11 @@
         <div class="box-content">
             <div>
                 <span>Response time</span>
-                <strong>42 ms</strong>
+                <strong>--</strong>
             </div>
             <div>
                 <span>Uptime</span>
-                <strong>99.98%</strong>
+                <strong>--</strong>
             </div>
         </div>
     </div>
@@ -55,13 +59,15 @@
         <div class="box-content">
             <div>
                 <span>Used storage</span>
-                <p id="load">███████░░░░░░░░░░</p>
-                <p id="total-left>">2/10 GB</p>
+                <div class="storage-bar-wrapper">
+                    <p id="load">░░░░░░░░░░░░░░░░░</p>
+                    <p id="total-left">--</p>
+                </div>
             </div>
 
             <div>
                 <span>Total files</span>
-                <strong>128</strong>
+                <strong>--</strong>
             </div>
         </div>
     </div>
@@ -76,11 +82,11 @@
         <div class="box-content">
             <div>
                 <span>Response time</span>
-                <strong>68 ms</strong>
+                <strong>--</strong>
             </div>
             <div>
                 <span>Uptime</span>
-                <strong>99.99%</strong>
+                <strong>--</strong>
             </div>
         </div>
     </div>
@@ -103,5 +109,6 @@
         </div>
     </div>
 </section>
+<div class="footer-credit">Made by Luke - 2026</div>
 </body>
 </html>
