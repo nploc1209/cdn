@@ -619,7 +619,7 @@ export default {
                     size: fileSize,
                     mime_type: finalMime,
                     created_at: now,
-                    url: `${url.origin}/f/${id}`,
+                    url: `${url.origin}/f/${id}/${encodeURIComponent(fileName)}`,
                     new_account: newAccount
                 });
             }
@@ -793,7 +793,7 @@ export default {
                     size: fileSize,
                     mime_type: mimeType,
                     created_at: now,
-                    url: `${url.origin}/f/${id}`,
+                    url: `${url.origin}/f/${id}/${encodeURIComponent(fileName)}`,
                     new_account: newAccount
                 });
             }
@@ -971,7 +971,7 @@ export default {
                 return jsonResponse({
                     id: file.id,
                     name: file.name,
-                    url: `${url.origin}/f/${file.id}`
+                    url: `${url.origin}/f/${file.id}/${encodeURIComponent(file.name)}`
                 });
             }
 
@@ -1022,7 +1022,7 @@ export default {
                     mime_type: file.mime_type,
                     created_at: file.created_at,
                     updated_at: file.updated_at,
-                    url: `${url.origin}/f/${file.id}`
+                    url: `${url.origin}/f/${file.id}/${encodeURIComponent(file.name)}`
                 });
             }
 

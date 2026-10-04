@@ -1,7 +1,7 @@
 # The CDN Website
 **The CDN Website** is a simple, fast, and privacy-focused personal file CDN. It lets you upload, store, and serve your files through Cloudflare’s global network, making them easily accessible from anywhere.
 
-![screenshot](https://thecdnweb.site/f/3d55764e-4250-4393-bc2d-fbc4d2a2f380)
+![screenshot](https://thecdnweb.site/f/3d55764e-4250-4393-bc2d-fbc4d2a2f380/screenshot.png)
 This image above is using **The CDN Website** to display ❤️
 
 ## Give it a try

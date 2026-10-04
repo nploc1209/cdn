@@ -863,7 +863,7 @@ if (fileList) {
 
         if (linkButton) {
             const id = linkButton.dataset.id;
-            await copyFileLink(id);
+            await copyFileLink(id, linkButton);
             return;
         }
 
@@ -901,7 +901,7 @@ async function deleteFile(id) {
     }
 }
 
-async function copyFileLink(id) {
+async function copyFileLink(id, btn = null) {
     try {
         const response = await authFetch(`${API}/api/files/${id}/link`);
         const data = await response.json();
@@ -911,6 +911,12 @@ async function copyFileLink(id) {
         }
 
         await navigator.clipboard.writeText(data.url);
+        if (btn) {
+            btn.innerHTML = checkIconSvg;
+            setTimeout(() => {
+                btn.innerHTML = linkIconSvg;
+            }, 1500);
+        }
     } catch (error) {
         console.error("Failed to copy link:", error);
         alert(error.message);
