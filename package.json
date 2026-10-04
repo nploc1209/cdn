@@ -28,7 +28,7 @@
     "youch-core": "^0.3.3"
   },
   "scripts": {
-    "sync-assets": "mkdir -p public && cp -f index.html status.html docs.html account.html auth.html style.css script.js public/",
+    "sync-assets": "mkdir -p public && cp -f index.html status.html docs.html account.html auth.html style.css script.js favicon.svg favicon.ico public/",
     "dev": "npm run sync-assets && wrangler dev",
     "deploy": "npm run sync-assets && wrangler deploy",
     "db:migrate:local": "wrangler d1 migrations apply cdn-db --local",
