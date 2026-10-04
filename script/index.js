@@ -833,10 +833,11 @@ export default {
                     );
                 }
 
+                const hasRange = request.headers.has("range");
                 const ifNoneMatch = request.headers.get("if-none-match");
 
                 const object = await env.FILES.get(file.r2_key, {
-                    range: request.headers,
+                    range: hasRange ? request.headers : undefined,
                     onlyIf: request.headers
                 });
 
@@ -896,7 +897,7 @@ export default {
                     id
                 );
 
-                if (object.range) {
+                if (hasRange && object.range) {
                     responseHeaders.set(
                         "Content-Range",
                         `bytes ${object.range.offset}-${object.range.offset + object.range.length - 1}/${file.size}`
