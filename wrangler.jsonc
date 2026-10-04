@@ -1,0 +1,25 @@
+{
+	"name": "the-cdn-website",
+	"main": "script/index.js",
+	"compatibility_date": "2026-09-30",
+
+	"assets": {
+		"directory": "./public",
+		"binding": "ASSETS"
+	},
+
+	"r2_buckets": [
+		{
+			"binding": "FILES",
+			"bucket_name": "cdn-files"
+		}
+	],
+
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "cdn-db",
+			"database_id": "792dfa3f-1b38-4b6c-a529-af18486a10cb"
+		}
+	]
+}

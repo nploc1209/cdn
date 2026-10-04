@@ -1,4 +1,4 @@
-const STORAGE_LIMIT = 10 * 1024 * 1024 * 1024;
+const STORAGE_LIMIT = 128 * 1024 * 1024;
 
 const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
@@ -82,6 +82,70 @@ async function logAnalytics(env, ownerId, event, bytes = 0, fileId = null) {
     }
 }
 
+async function ensureUsersTable(env) {
+    try {
+        await env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS users (
+                id TEXT PRIMARY KEY,
+                username TEXT NOT NULL UNIQUE,
+                password TEXT NOT NULL,
+                created_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL
+            )
+        `).run();
+        await env.DB.prepare(`
+            CREATE INDEX IF NOT EXISTS idx_users_username ON users (username)
+        `).run();
+    } catch (e) {
+    }
+}
+
+async function ensureUserAccount(env, ownerId) {
+    try {
+        await ensureUsersTable(env);
+        const existing = await env.DB
+            .prepare(`SELECT id, username, password FROM users WHERE id = ?`)
+            .bind(ownerId)
+            .first();
+
+        if (existing) {
+            return null;
+        }
+
+        let autoUsername = "";
+        for (let i = 0; i < 5; i++) {
+            const candidate = `guest_${Math.random().toString(36).substring(2, 6)}`;
+            const taken = await env.DB.prepare(`SELECT id FROM users WHERE username = ?`).bind(candidate).first();
+            if (!taken) {
+                autoUsername = candidate;
+                break;
+            }
+        }
+        if (!autoUsername) {
+            autoUsername = `guest_${Date.now().toString(36).slice(-4)}`;
+        }
+
+        const autoPassword = `pass_${Math.random().toString(36).substring(2, 8)}`;
+        const now = Date.now();
+
+        await env.DB
+            .prepare(`
+                INSERT INTO users (id, username, password, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?)
+            `)
+            .bind(ownerId, autoUsername, autoPassword, now, now)
+            .run();
+
+        return {
+            id: ownerId,
+            username: autoUsername,
+            password: autoPassword
+        };
+    } catch (e) {
+        return null;
+    }
+}
+
 export default {
     async fetch(request, env) {
         const url = new URL(request.url);
@@ -150,6 +214,132 @@ export default {
                 await logAnalytics(env, ownerId, "api_request", 50);
 
                 return jsonResponse(result);
+            }
+
+            if (url.pathname === "/api/auth/login" && request.method === "POST") {
+                await ensureUsersTable(env);
+                const body = await request.json().catch(() => ({}));
+                const username = (body.username || "").trim();
+                const password = (body.password || "").trim();
+
+                if (!username || !password) {
+                    return jsonResponse({ error: "Username and password are required" }, 400);
+                }
+
+                const user = await env.DB
+                    .prepare(`SELECT id, username, password, created_at FROM users WHERE username = ?`)
+                    .bind(username)
+                    .first();
+
+                if (!user || user.password !== password) {
+                    return jsonResponse({ error: "Invalid username or password" }, 401);
+                }
+
+                return jsonResponse({
+                    success: true,
+                    user: {
+                        id: user.id,
+                        username: user.username,
+                        created_at: user.created_at
+                    }
+                });
+            }
+
+            if (url.pathname === "/api/auth/me" && request.method === "GET") {
+                await ensureUsersTable(env);
+                const user = await env.DB
+                    .prepare(`SELECT id, username, password, created_at FROM users WHERE id = ?`)
+                    .bind(ownerId)
+                    .first();
+
+                if (!user) {
+                    return jsonResponse({ user: null });
+                }
+
+                return jsonResponse({
+                    user: {
+                        id: user.id,
+                        username: user.username,
+                        password: user.password,
+                        created_at: user.created_at
+                    }
+                });
+            }
+
+            if (url.pathname === "/api/auth/change-username" && request.method === "POST") {
+                await ensureUsersTable(env);
+                const body = await request.json().catch(() => ({}));
+                const newUsername = (body.username || "").trim();
+
+                if (!newUsername || newUsername.length < 3) {
+                    return jsonResponse({ error: "Username must be at least 3 characters" }, 400);
+                }
+
+                const user = await env.DB
+                    .prepare(`SELECT id FROM users WHERE id = ?`)
+                    .bind(ownerId)
+                    .first();
+
+                if (!user) {
+                    return jsonResponse({ error: "Account not found" }, 404);
+                }
+
+                const taken = await env.DB
+                    .prepare(`SELECT id FROM users WHERE username = ? AND id != ?`)
+                    .bind(newUsername, ownerId)
+                    .first();
+
+                if (taken) {
+                    return jsonResponse({ error: "Username is already taken" }, 409);
+                }
+
+                await env.DB
+                    .prepare(`UPDATE users SET username = ?, updated_at = ? WHERE id = ?`)
+                    .bind(newUsername, Date.now(), ownerId)
+                    .run();
+
+                return jsonResponse({ success: true, username: newUsername });
+            }
+
+            if (url.pathname === "/api/auth/change-password" && request.method === "POST") {
+                await ensureUsersTable(env);
+                const body = await request.json().catch(() => ({}));
+                const oldPassword = (body.old_password || "").trim();
+                const newPassword = (body.new_password || "").trim();
+
+                if (!newPassword || newPassword.length < 4) {
+                    return jsonResponse({ error: "New password must be at least 4 characters" }, 400);
+                }
+
+                const user = await env.DB
+                    .prepare(`SELECT id, password FROM users WHERE id = ?`)
+                    .bind(ownerId)
+                    .first();
+
+                if (!user) {
+                    return jsonResponse({ error: "Account not found" }, 404);
+                }
+
+                if (user.password !== oldPassword) {
+                    return jsonResponse({ error: "Incorrect old password" }, 400);
+                }
+
+                await env.DB
+                    .prepare(`UPDATE users SET password = ?, updated_at = ? WHERE id = ?`)
+                    .bind(newPassword, Date.now(), ownerId)
+                    .run();
+
+                return jsonResponse({ success: true });
+            }
+
+            if (url.pathname === "/api/auth/delete" && (request.method === "POST" || request.method === "DELETE")) {
+                await ensureUsersTable(env);
+                await env.DB
+                    .prepare(`DELETE FROM users WHERE id = ?`)
+                    .bind(ownerId)
+                    .run();
+
+                return jsonResponse({ success: true });
             }
 
             if (
@@ -327,13 +517,16 @@ export default {
                     throw error;
                 }
 
+                const newAccount = await ensureUserAccount(env, ownerId);
+
                 return jsonResponse({
                     id,
                     name: fileName,
                     size: fileSize,
                     mime_type: finalMime,
                     created_at: now,
-                    url: `${url.origin}/f/${id}`
+                    url: `${url.origin}/f/${id}`,
+                    new_account: newAccount
                 });
             }
 
@@ -488,13 +681,16 @@ export default {
                     throw error;
                 }
 
+                const newAccount = await ensureUserAccount(env, ownerId);
+
                 return jsonResponse({
                     id,
                     name: fileName,
                     size: fileSize,
                     mime_type: mimeType,
                     created_at: now,
-                    url: `${url.origin}/f/${id}`
+                    url: `${url.origin}/f/${id}`,
+                    new_account: newAccount
                 });
             }
 
@@ -902,8 +1098,19 @@ export default {
                     .bind(ownerId)
                     .first();
 
+                const globalStats = await env.DB
+                    .prepare(`
+                        SELECT COUNT(*)               AS file_count,
+                               COALESCE(SUM(size), 0) AS storage_used
+                        FROM files
+                    `)
+                    .first();
+
                 const storageUsed = Number(stats?.storage_used || 0);
                 const fileCount = Number(stats?.file_count || 0);
+                const globalStorageUsed = Number(globalStats?.storage_used || 0);
+                const globalFileCount = Number(globalStats?.file_count || 0);
+                const GLOBAL_STORAGE_LIMIT = 10 * 1024 * 1024 * 1024;
 
                 const analyticsStats = await env.DB
                     .prepare(`
@@ -1051,9 +1258,15 @@ export default {
                         available: Math.max(0, STORAGE_LIMIT - storageUsed),
                         percentage,
                         bar: generateProgressBar(storageUsed, STORAGE_LIMIT, 27),
-                        short_bar: generateProgressBar(storageUsed, STORAGE_LIMIT, 17)
+                        short_bar: generateProgressBar(storageUsed, STORAGE_LIMIT, 17),
+                        global_used: globalStorageUsed,
+                        global_limit: GLOBAL_STORAGE_LIMIT,
+                        global_available: Math.max(0, GLOBAL_STORAGE_LIMIT - globalStorageUsed),
+                        global_bar: generateProgressBar(globalStorageUsed, GLOBAL_STORAGE_LIMIT, 27),
+                        global_short_bar: generateProgressBar(globalStorageUsed, GLOBAL_STORAGE_LIMIT, 17)
                     },
                     files: fileCount,
+                    global_files: globalFileCount,
                     bandwidth: {
                         total: totalBandwidth,
                         download: downloadBytes,
@@ -1217,11 +1430,16 @@ export default {
                 });
             }
 
+            if (url.pathname === "/auth" || url.pathname === "/account" || url.pathname === "/auth.html") {
+                const rewriteReq = new Request(new URL("/account.html", request.url), request);
+                return env.ASSETS ? env.ASSETS.fetch(rewriteReq) : jsonResponse({ error: "Not found" }, 404);
+            }
+
             if (env.ASSETS) {
                 const assetResponse = await env.ASSETS.fetch(request);
                 if (assetResponse.ok && !url.pathname.endsWith(".html") && url.pathname !== "/") {
                     const cachedHeaders = new Headers(assetResponse.headers);
-                    cachedHeaders.set("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
+                    cachedHeaders.set("Cache-Control", "no-cache");
                     return new Response(assetResponse.body, {
                         status: assetResponse.status,
                         statusText: assetResponse.statusText,
