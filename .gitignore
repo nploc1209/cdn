@@ -1,2 +1,13 @@
 .DS_Store
 .idea/
+.env*
+.dev.vars
+.wrangler/
+node_modules/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.sqlite*
+*.db
+.mf/

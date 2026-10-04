@@ -17,11 +17,77 @@ function jsonResponse(data, status = 200, headers = {}) {
     });
 }
 
-function getOwnerId(request, url) {
-    return request.headers.get("x-owner-id") ||
-           url.searchParams.get("owner_id") ||
-           "demo";
+async function hashPassword(password, saltHex = null) {
+    const enc = new TextEncoder();
+    const salt = saltHex
+        ? new Uint8Array(saltHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)))
+        : crypto.getRandomValues(new Uint8Array(16));
+    const keyMaterial = await crypto.subtle.importKey(
+        "raw",
+        enc.encode(password),
+        { name: "PBKDF2" },
+        false,
+        ["deriveBits"]
+    );
+    const derivedBits = await crypto.subtle.deriveBits(
+        {
+            name: "PBKDF2",
+            salt,
+            iterations: 100000,
+            hash: "SHA-256"
+        },
+        keyMaterial,
+        256
+    );
+    const hashHex = Array.from(new Uint8Array(derivedBits)).map(b => b.toString(16).padStart(2, "0")).join("");
+    const saltStr = Array.from(salt).map(b => b.toString(16).padStart(2, "0")).join("");
+    return `pbkdf2:100000:${saltStr}:${hashHex}`;
 }
+
+async function verifyPassword(password, stored) {
+    if (!stored) return false;
+    if (stored.startsWith("pbkdf2:")) {
+        const parts = stored.split(":");
+        if (parts.length !== 4) return false;
+        const iterations = parseInt(parts[1], 10);
+        const saltHex = parts[2];
+        const hashHex = parts[3];
+        const enc = new TextEncoder();
+        const salt = new Uint8Array(saltHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+        const keyMaterial = await crypto.subtle.importKey(
+            "raw",
+            enc.encode(password),
+            { name: "PBKDF2" },
+            false,
+            ["deriveBits"]
+        );
+        const derivedBits = await crypto.subtle.deriveBits(
+            {
+                name: "PBKDF2",
+                salt,
+                iterations,
+                hash: "SHA-256"
+            },
+            keyMaterial,
+            256
+        );
+        const computedHex = Array.from(new Uint8Array(derivedBits)).map(b => b.toString(16).padStart(2, "0")).join("");
+        return computedHex === hashHex;
+    }
+    return stored === password;
+}
+
+function getOwnerId(request, url) {
+    const raw = request.headers.get("x-owner-id") ||
+           url.searchParams.get("owner_id") ||
+           "";
+    const clean = raw.trim();
+    if (!clean || clean === "demo" || !/^[a-zA-Z0-9_-]{1,64}$/.test(clean)) {
+        return null;
+    }
+    return clean;
+}
+
 
 function generateProgressBar(used, limit, length = 20) {
     if (limit <= 0) {
@@ -35,6 +101,9 @@ function generateProgressBar(used, limit, length = 20) {
 }
 
 async function logActivity(env, ownerId, action, fileId = null, fileName = null) {
+    if (!ownerId) {
+        return;
+    }
     try {
         const now = Date.now();
         const oneDayAgo = now - 86400000;
@@ -64,6 +133,9 @@ async function logActivity(env, ownerId, action, fileId = null, fileName = null)
 }
 
 async function logAnalytics(env, ownerId, event, bytes = 0, fileId = null) {
+    if (!ownerId) {
+        return;
+    }
     try {
         await env.DB
             .prepare(`
@@ -101,6 +173,9 @@ async function ensureUsersTable(env) {
 }
 
 async function ensureUserAccount(env, ownerId) {
+    if (!ownerId) {
+        return null;
+    }
     try {
         await ensureUsersTable(env);
         const existing = await env.DB
@@ -126,6 +201,7 @@ async function ensureUserAccount(env, ownerId) {
         }
 
         const autoPassword = `pass_${Math.random().toString(36).substring(2, 8)}`;
+        const hashedPassword = await hashPassword(autoPassword);
         const now = Date.now();
 
         await env.DB
@@ -133,7 +209,7 @@ async function ensureUserAccount(env, ownerId) {
                 INSERT INTO users (id, username, password, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?)
             `)
-            .bind(ownerId, autoUsername, autoPassword, now, now)
+            .bind(ownerId, autoUsername, hashedPassword, now, now)
             .run();
 
         return {
@@ -179,43 +255,6 @@ export default {
                 });
             }
 
-            if (url.pathname === "/api/test-r2") {
-                await env.FILES.put(
-                    "test/hello.txt",
-                    "Hello from The CDN Website!"
-                );
-
-                const object = await env.FILES.get("test/hello.txt");
-
-                if (!object) {
-                    return jsonResponse(
-                        {error: "R2 object not found"},
-                        500
-                    );
-                }
-
-                await logAnalytics(env, ownerId, "api_request", 50);
-
-                return new Response(await object.text(), {
-                    headers: {
-                        ...corsHeaders,
-                        "Content-Type": "text/plain"
-                    }
-                });
-            }
-
-            if (url.pathname === "/api/test-db") {
-                const result = await env.DB
-                    .prepare(
-                        "SELECT name FROM sqlite_master WHERE type = 'table'"
-                    )
-                    .all();
-
-                await logAnalytics(env, ownerId, "api_request", 50);
-
-                return jsonResponse(result);
-            }
-
             if (url.pathname === "/api/auth/login" && request.method === "POST") {
                 await ensureUsersTable(env);
                 const body = await request.json().catch(() => ({}));
@@ -231,8 +270,21 @@ export default {
                     .bind(username)
                     .first();
 
-                if (!user || user.password !== password) {
+                if (!user) {
                     return jsonResponse({ error: "Invalid username or password" }, 401);
+                }
+
+                const isValid = await verifyPassword(password, user.password);
+                if (!isValid) {
+                    return jsonResponse({ error: "Invalid username or password" }, 401);
+                }
+
+                if (!user.password.startsWith("pbkdf2:")) {
+                    const upgradedHash = await hashPassword(password);
+                    await env.DB
+                        .prepare(`UPDATE users SET password = ?, updated_at = ? WHERE id = ?`)
+                        .bind(upgradedHash, Date.now(), user.id)
+                        .run();
                 }
 
                 return jsonResponse({
@@ -246,9 +298,12 @@ export default {
             }
 
             if (url.pathname === "/api/auth/me" && request.method === "GET") {
+                if (!ownerId) {
+                    return jsonResponse({ user: null });
+                }
                 await ensureUsersTable(env);
                 const user = await env.DB
-                    .prepare(`SELECT id, username, password, created_at FROM users WHERE id = ?`)
+                    .prepare(`SELECT id, username, created_at FROM users WHERE id = ?`)
                     .bind(ownerId)
                     .first();
 
@@ -260,13 +315,15 @@ export default {
                     user: {
                         id: user.id,
                         username: user.username,
-                        password: user.password,
                         created_at: user.created_at
                     }
                 });
             }
 
             if (url.pathname === "/api/auth/change-username" && request.method === "POST") {
+                if (!ownerId) {
+                    return jsonResponse({ error: "Unauthorized" }, 401);
+                }
                 await ensureUsersTable(env);
                 const body = await request.json().catch(() => ({}));
                 const newUsername = (body.username || "").trim();
@@ -302,6 +359,9 @@ export default {
             }
 
             if (url.pathname === "/api/auth/change-password" && request.method === "POST") {
+                if (!ownerId) {
+                    return jsonResponse({ error: "Unauthorized" }, 401);
+                }
                 await ensureUsersTable(env);
                 const body = await request.json().catch(() => ({}));
                 const oldPassword = (body.old_password || "").trim();
@@ -320,19 +380,25 @@ export default {
                     return jsonResponse({ error: "Account not found" }, 404);
                 }
 
-                if (user.password !== oldPassword) {
+                const isValid = await verifyPassword(oldPassword, user.password);
+                if (!isValid) {
                     return jsonResponse({ error: "Incorrect old password" }, 400);
                 }
 
+                const newHashed = await hashPassword(newPassword);
+
                 await env.DB
                     .prepare(`UPDATE users SET password = ?, updated_at = ? WHERE id = ?`)
-                    .bind(newPassword, Date.now(), ownerId)
+                    .bind(newHashed, Date.now(), ownerId)
                     .run();
 
                 return jsonResponse({ success: true });
             }
 
             if (url.pathname === "/api/auth/delete" && (request.method === "POST" || request.method === "DELETE")) {
+                if (!ownerId) {
+                    return jsonResponse({ error: "Unauthorized" }, 401);
+                }
                 await ensureUsersTable(env);
                 await env.DB
                     .prepare(`DELETE FROM users WHERE id = ?`)
@@ -346,6 +412,9 @@ export default {
                 url.pathname === "/api/files" &&
                 request.method === "GET"
             ) {
+                if (!ownerId) {
+                    return jsonResponse({ files: [] });
+                }
                 const search = url.searchParams.get("search")?.trim();
                 const limitParam = url.searchParams.get("limit");
                 const offsetParam = url.searchParams.get("offset");
@@ -393,8 +462,12 @@ export default {
                 url.pathname === "/api/upload/init" &&
                 request.method === "POST"
             ) {
+                if (!ownerId) {
+                    return jsonResponse({ error: "Unauthorized" }, 401);
+                }
                 const body = await request.json().catch(() => ({}));
-                const name = body.name || "upload.bin";
+                const rawName = (body.name || "upload.bin").trim();
+                const name = rawName.replace(/[/\\?%*:|"<>]/g, "_").trim() || "upload.bin";
                 const size = Number(body.size || 0);
                 const mimeType = body.mimeType || "application/octet-stream";
 
@@ -441,6 +514,9 @@ export default {
                 url.pathname === "/api/upload/part" &&
                 (request.method === "PUT" || request.method === "POST")
             ) {
+                if (!ownerId) {
+                    return jsonResponse({ error: "Unauthorized" }, 401);
+                }
                 const uploadId = url.searchParams.get("uploadId");
                 const key = url.searchParams.get("key");
                 const partNumber = parseInt(url.searchParams.get("partNumber") || "1", 10);
@@ -449,6 +525,13 @@ export default {
                     return jsonResponse(
                         {error: "Missing or invalid part parameters"},
                         400
+                    );
+                }
+
+                if (!key.startsWith(`files/${ownerId}/`)) {
+                    return jsonResponse(
+                        {error: "Unauthorized access to file key"},
+                        403
                     );
                 }
 
@@ -466,13 +549,23 @@ export default {
                 url.pathname === "/api/upload/complete" &&
                 request.method === "POST"
             ) {
+                if (!ownerId) {
+                    return jsonResponse({ error: "Unauthorized" }, 401);
+                }
                 const body = await request.json().catch(() => ({}));
                 const { id, uploadId, key, name, size, mimeType, parts } = body;
 
-                if (!uploadId || !key || !parts || !Array.isArray(parts)) {
+                if (!uploadId || !key || !id || !parts || !Array.isArray(parts)) {
                     return jsonResponse(
                         {error: "Missing or invalid complete parameters"},
                         400
+                    );
+                }
+
+                if (!key.startsWith(`files/${ownerId}/${id}/`)) {
+                    return jsonResponse(
+                        {error: "Unauthorized access to file key"},
+                        403
                     );
                 }
 
@@ -481,7 +574,8 @@ export default {
                 await multipart.complete(sortedParts);
 
                 const now = Date.now();
-                const fileName = name || "upload.bin";
+                const rawName = (name || "upload.bin").trim();
+                const fileName = rawName.replace(/[/\\?%*:|"<>]/g, "_").trim() || "upload.bin";
                 const fileSize = Number(size || 0);
                 const finalMime = mimeType || "application/octet-stream";
 
@@ -534,10 +628,16 @@ export default {
                 url.pathname === "/api/upload/abort" &&
                 request.method === "POST"
             ) {
+                if (!ownerId) {
+                    return jsonResponse({ error: "Unauthorized" }, 401);
+                }
                 const body = await request.json().catch(() => ({}));
                 const { uploadId, key } = body;
 
                 if (uploadId && key) {
+                    if (!key.startsWith(`files/${ownerId}/`)) {
+                        return jsonResponse({ error: "Unauthorized access to file key" }, 403);
+                    }
                     const multipart = env.FILES.resumeMultipartUpload(key, uploadId);
                     await multipart.abort();
                 }
@@ -551,6 +651,9 @@ export default {
                 url.pathname === "/api/upload" &&
                 request.method === "POST"
             ) {
+                if (!ownerId) {
+                    return jsonResponse({ error: "Unauthorized" }, 401);
+                }
                 let file = null;
                 const contentType = request.headers.get("content-type") || "";
 
@@ -592,9 +695,10 @@ export default {
                     );
                 }
 
-                const fileName = (file && typeof file.name === "string" && file.name.length > 0)
+                const rawFileName = (file && typeof file.name === "string" && file.name.length > 0)
                     ? file.name
                     : (url.searchParams.get("name") || request.headers.get("x-filename") || "upload.bin");
+                const fileName = rawFileName.replace(/[/\\?%*:|"<>]/g, "_").trim() || "upload.bin";
                 const mimeType = (file && typeof file.type === "string" && file.type.length > 0)
                     ? file.type
                     : "application/octet-stream";
@@ -744,8 +848,8 @@ export default {
                 }
 
                 if (ifNoneMatch && (ifNoneMatch === object.httpEtag || ifNoneMatch === "*")) {
-                    await logActivity(env, file.owner_id || ownerId, "cached", id, file.name);
-                    await logAnalytics(env, file.owner_id || ownerId, "download", 0, id);
+                    await logActivity(env, file.owner_id, "cached", id, file.name);
+                    await logAnalytics(env, file.owner_id, "download", 0, id);
 
                     return new Response(null, {
                         status: 304,
@@ -778,7 +882,7 @@ export default {
 
                 await logActivity(
                     env,
-                    file.owner_id || ownerId,
+                    file.owner_id,
                     request.method === "HEAD" ? "head" : "download",
                     id,
                     file.name
@@ -786,7 +890,7 @@ export default {
 
                 await logAnalytics(
                     env,
-                    file.owner_id || ownerId,
+                    file.owner_id,
                     request.method === "HEAD" ? "cdn_request" : "download",
                     servedBytes,
                     id
@@ -831,6 +935,9 @@ export default {
                 url.pathname.endsWith("/link") &&
                 request.method === "GET"
             ) {
+                if (!ownerId) {
+                    return jsonResponse({ error: "Unauthorized" }, 401);
+                }
                 const parts = url.pathname.split("/");
                 const id = parts[3];
 
@@ -872,6 +979,9 @@ export default {
                 url.pathname.startsWith("/api/files/") &&
                 request.method === "GET"
             ) {
+                if (!ownerId) {
+                    return jsonResponse({ error: "Unauthorized" }, 401);
+                }
                 const id = url.pathname.slice("/api/files/".length).split("/")[0];
 
                 if (!id) {
@@ -920,9 +1030,12 @@ export default {
                 url.pathname.startsWith("/api/files/") &&
                 request.method === "PATCH"
             ) {
+                if (!ownerId) {
+                    return jsonResponse({ error: "Unauthorized" }, 401);
+                }
                 const id = url.pathname.slice("/api/files/".length).split("/")[0];
                 const body = await request.json().catch(() => ({}));
-                const newName = body.name?.trim();
+                const rawName = body.name?.trim();
 
                 if (!id) {
                     return jsonResponse(
@@ -931,12 +1044,14 @@ export default {
                     );
                 }
 
-                if (!newName) {
+                if (!rawName) {
                     return jsonResponse(
                         {error: "File name is required"},
                         400
                     );
                 }
+
+                const newName = rawName.replace(/[/\\?%*:|"<>]/g, "_").trim() || "file";
 
                 const file = await env.DB
                     .prepare(`
@@ -983,6 +1098,9 @@ export default {
                 url.pathname.startsWith("/api/files/") &&
                 request.method === "DELETE"
             ) {
+                if (!ownerId) {
+                    return jsonResponse({ error: "Unauthorized" }, 401);
+                }
                 const id = url.pathname.slice("/api/files/".length).split("/")[0];
 
                 if (!id) {
@@ -1034,6 +1152,9 @@ export default {
                 url.pathname === "/api/files/batch-delete" &&
                 request.method === "POST"
             ) {
+                if (!ownerId) {
+                    return jsonResponse({ error: "Unauthorized" }, 401);
+                }
                 const body = await request.json().catch(() => ({}));
                 const ids = Array.isArray(body?.ids) ? body.ids : [];
 
@@ -1086,17 +1207,20 @@ export default {
                 url.pathname === "/api/status" &&
                 request.method === "GET"
             ) {
-                await logAnalytics(env, ownerId, "api_request", 200);
+                if (ownerId) {
+                    await logAnalytics(env, ownerId, "api_request", 200);
+                }
 
-                const stats = await env.DB
-                    .prepare(`
-                        SELECT COUNT(*)               AS file_count,
-                               COALESCE(SUM(size), 0) AS storage_used
-                        FROM files
-                        WHERE owner_id = ?
-                    `)
-                    .bind(ownerId)
-                    .first();
+                let storageUsed = 0;
+                let fileCount = 0;
+                let downloadBytes = 0;
+                let uploadBytes = 0;
+                let otherBytes = 0;
+                let downloadReqs = 0;
+                let uploadReqs = 0;
+                let otherReqs = 0;
+                let totalLogs = 0;
+                let errorLogs = 0;
 
                 const globalStats = await env.DB
                     .prepare(`
@@ -1106,41 +1230,97 @@ export default {
                     `)
                     .first();
 
-                const storageUsed = Number(stats?.storage_used || 0);
-                const fileCount = Number(stats?.file_count || 0);
                 const globalStorageUsed = Number(globalStats?.storage_used || 0);
                 const globalFileCount = Number(globalStats?.file_count || 0);
                 const GLOBAL_STORAGE_LIMIT = 10 * 1024 * 1024 * 1024;
 
-                const analyticsStats = await env.DB
-                    .prepare(`
-                        SELECT event,
-                               COUNT(*)                AS req_count,
-                               COALESCE(SUM(bytes), 0) AS byte_count
-                        FROM analytics
-                        WHERE owner_id = ?
-                        GROUP BY event
-                    `)
-                    .bind(ownerId)
-                    .all();
+                const now = Date.now();
+                const bucketMinutes = 5;
+                const bucketMs = bucketMinutes * 60 * 1000;
+                const bucketCount = 11;
+                const chartStartTime = now - bucketCount * bucketMs;
+                const bucketMap = {};
 
-                let downloadBytes = 0;
-                let uploadBytes = 0;
-                let otherBytes = 0;
-                let downloadReqs = 0;
-                let uploadReqs = 0;
-                let otherReqs = 0;
+                if (ownerId) {
+                    const stats = await env.DB
+                        .prepare(`
+                            SELECT COUNT(*)               AS file_count,
+                                   COALESCE(SUM(size), 0) AS storage_used
+                            FROM files
+                            WHERE owner_id = ?
+                        `)
+                        .bind(ownerId)
+                        .first();
 
-                for (const row of analyticsStats.results) {
-                    if (row.event === "download") {
-                        downloadBytes = Number(row.byte_count || 0);
-                        downloadReqs = Number(row.req_count || 0);
-                    } else if (row.event === "upload") {
-                        uploadBytes = Number(row.byte_count || 0);
-                        uploadReqs = Number(row.req_count || 0);
-                    } else {
-                        otherBytes += Number(row.byte_count || 0);
-                        otherReqs += Number(row.req_count || 0);
+                    storageUsed = Number(stats?.storage_used || 0);
+                    fileCount = Number(stats?.file_count || 0);
+
+                    const analyticsStats = await env.DB
+                        .prepare(`
+                            SELECT event,
+                                   COUNT(*)                AS req_count,
+                                   COALESCE(SUM(bytes), 0) AS byte_count
+                            FROM analytics
+                            WHERE owner_id = ?
+                            GROUP BY event
+                        `)
+                        .bind(ownerId)
+                        .all();
+
+                    for (const row of analyticsStats.results) {
+                        if (row.event === "download") {
+                            downloadBytes = Number(row.byte_count || 0);
+                            downloadReqs = Number(row.req_count || 0);
+                        } else if (row.event === "upload") {
+                            uploadBytes = Number(row.byte_count || 0);
+                            uploadReqs = Number(row.req_count || 0);
+                        } else {
+                            otherBytes += Number(row.byte_count || 0);
+                            otherReqs += Number(row.req_count || 0);
+                        }
+                    }
+
+                    const totalLogsResult = await env.DB
+                        .prepare(`
+                            SELECT COUNT(*) AS total
+                            FROM logs
+                            WHERE owner_id = ?
+                        `)
+                        .bind(ownerId)
+                        .first();
+
+                    const errorLogsResult = await env.DB
+                        .prepare(`
+                            SELECT COUNT(*) AS total
+                            FROM logs
+                            WHERE owner_id = ? AND action LIKE '%error%'
+                        `)
+                        .bind(ownerId)
+                        .first();
+
+                    totalLogs = Number(totalLogsResult?.total || 0);
+                    errorLogs = Number(errorLogsResult?.total || 0);
+
+                    const recentTimeline = await env.DB
+                        .prepare(`
+                            SELECT CAST((created_at - ?) / ? AS INTEGER) AS bucket,
+                                   COUNT(*)                               AS req_count,
+                                   COALESCE(SUM(bytes), 0)                AS byte_count
+                            FROM analytics
+                            WHERE owner_id = ? AND created_at >= ?
+                            GROUP BY bucket
+                        `)
+                        .bind(chartStartTime, bucketMs, ownerId, chartStartTime)
+                        .all();
+
+                    for (const row of recentTimeline.results || []) {
+                        const b = Number(row.bucket);
+                        if (b >= 0 && b < bucketCount) {
+                            bucketMap[b] = {
+                                requests: Number(row.req_count || 0),
+                                bytes: Number(row.byte_count || 0)
+                            };
+                        }
                     }
                 }
 
@@ -1149,27 +1329,6 @@ export default {
                 const percentage = Number(
                     ((storageUsed / STORAGE_LIMIT) * 100).toFixed(2)
                 );
-
-                const totalLogsResult = await env.DB
-                    .prepare(`
-                        SELECT COUNT(*) AS total
-                        FROM logs
-                        WHERE owner_id = ?
-                    `)
-                    .bind(ownerId)
-                    .first();
-
-                const errorLogsResult = await env.DB
-                    .prepare(`
-                        SELECT COUNT(*) AS total
-                        FROM logs
-                        WHERE owner_id = ? AND action LIKE '%error%'
-                    `)
-                    .bind(ownerId)
-                    .first();
-
-                const totalLogs = Number(totalLogsResult?.total || 0);
-                const errorLogs = Number(errorLogsResult?.total || 0);
 
                 let calculatedApiUptime = "100.00%";
                 if (totalLogs > 0) {
@@ -1181,35 +1340,6 @@ export default {
                 if (downloadReqs > 0) {
                     const cdnRatio = Math.max(0, (downloadReqs - errorLogs) / downloadReqs);
                     calculatedCdnUptime = (cdnRatio * 100).toFixed(2) + "%";
-                }
-
-                const now = Date.now();
-                const bucketMinutes = 5;
-                const bucketMs = bucketMinutes * 60 * 1000;
-                const bucketCount = 11;
-                const chartStartTime = now - bucketCount * bucketMs;
-
-                const recentTimeline = await env.DB
-                    .prepare(`
-                        SELECT CAST((created_at - ?) / ? AS INTEGER) AS bucket,
-                               COUNT(*)                               AS req_count,
-                               COALESCE(SUM(bytes), 0)                AS byte_count
-                        FROM analytics
-                        WHERE owner_id = ? AND created_at >= ?
-                        GROUP BY bucket
-                    `)
-                    .bind(chartStartTime, bucketMs, ownerId, chartStartTime)
-                    .all();
-
-                const bucketMap = {};
-                for (const row of recentTimeline.results || []) {
-                    const b = Number(row.bucket);
-                    if (b >= 0 && b < bucketCount) {
-                        bucketMap[b] = {
-                            requests: Number(row.req_count || 0),
-                            bytes: Number(row.byte_count || 0)
-                        };
-                    }
                 }
 
                 const bandwidthValues = [];
@@ -1295,6 +1425,14 @@ export default {
                  url.pathname === "/api/logs") &&
                 (request.method === "GET" || request.method === "DELETE")
             ) {
+                if (!ownerId) {
+                    return jsonResponse({
+                        logs: [],
+                        total: 0,
+                        limit: 50,
+                        offset: 0
+                    });
+                }
                 if (request.method === "DELETE" || url.searchParams.get("clear") === "true") {
                     await env.DB
                         .prepare("DELETE FROM logs WHERE owner_id = ?")
@@ -1372,6 +1510,12 @@ export default {
                 url.pathname === "/api/analytics" &&
                 request.method === "GET"
             ) {
+                if (!ownerId) {
+                    return jsonResponse({
+                        summary: [],
+                        recent: []
+                    });
+                }
                 const limitParam = url.searchParams.get("limit");
                 const limit = Math.min(
                     Math.max(1, Number(limitParam) || 50),
